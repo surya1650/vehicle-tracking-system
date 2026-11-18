@@ -1,0 +1,8 @@
+services:
+  api:
+    build:
+      secrets:
+        - build_ca
+secrets:
+  build_ca:
+    file: ${ANPR_BUILD_CA:?Set ANPR_BUILD_CA to the trusted build CA PEM bundle}

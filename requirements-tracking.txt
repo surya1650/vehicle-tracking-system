@@ -1,0 +1,6 @@
+-r requirements.txt
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.8.0+cpu
+torchvision==0.23.0+cpu
+ultralytics==8.3.235
+lap==0.5.12
