@@ -90,3 +90,26 @@ def test_fastalpr_cpu_on_real_opencv_crop(tmp_path):
                    for item in observations)
     finally:
         process.close()
+
+
+def test_rendered_indian_plates_avoid_wrong_automatic_records():
+    import os
+    from pathlib import Path
+
+    import pytest
+
+    from validation.indian_plate_replay import run
+
+    video = os.environ.get("ANPR_TEST_VIDEO")
+    interpreter = os.environ.get("ANPR_TEST_OCR_PYTHON")
+    if not video or not interpreter:
+        pytest.skip("Set ANPR_TEST_VIDEO and ANPR_TEST_OCR_PYTHON for real FastALPR.")
+
+    report = run(Path(video), Path(interpreter))
+    assert report["cases"] == 20
+    assert report["totals"].get("WRONG_AUTO", 0) == 0
+    accepted_clean = {
+        row["family"] for row in report["results"]
+        if row["condition"] == "clean" and row["status"] == "CORRECT_AUTO"
+    }
+    assert accepted_clean == {"standard", "BH"}

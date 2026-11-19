@@ -79,14 +79,20 @@ def evaluate(truth: dict, tracking: list[dict], events: list[dict],
                           for observation, event in matches)
 
     target_events = truth["crossings"]
+    labeled_objects = {label["object_id"] for label in truth["vehicles"]}
     pairs = sorted([
         (abs(label["frame_number"] - event["frame_number"]), left, right)
         for left, label in enumerate(target_events)
         for right, event in enumerate(events)
         if label["direction"] == event["direction"]
+        and (
+            label["object_id"] not in labeled_objects
+            or event["track_id"] in identities.get(label["object_id"], {})
+        )
     ])
     matched_left, matched_right = set(), set()
     exact = characters = total_characters = 0
+    automatic_correct = automatic_wrong = 0
     for distance, left, right in pairs:
         if distance > tolerance or left in matched_left or right in matched_right:
             continue
@@ -96,6 +102,9 @@ def evaluate(truth: dict, tracking: list[dict], events: list[dict],
         if expected:
             predicted = normalize(events[right].get("plate_number"))
             exact += predicted == expected
+            if events[right]["verification_status"] == "AUTO":
+                automatic_correct += predicted == expected
+                automatic_wrong += predicted != expected
             characters += max(0, len(expected) - edit_distance(expected, predicted))
             total_characters += len(expected)
     for index, label in enumerate(target_events):
@@ -104,6 +113,9 @@ def evaluate(truth: dict, tracking: list[dict], events: list[dict],
 
     complete = truth["crossings_complete"]
     count = len(matched_left)
+    automatic_total = sum(event["verification_status"] == "AUTO" for event in events)
+    automatic_extra = sum(event["verification_status"] == "AUTO" and index not in matched_right
+                          for index, event in enumerate(events)) if complete else 0
     return {
         "ground_truth_source": truth["source"],
         "crossings_fully_labeled": complete,
@@ -116,8 +128,24 @@ def evaluate(truth: dict, tracking: list[dict], events: list[dict],
         "plate_association_accuracy_on_detected_plates": ratio(associated, seen_plates),
         "exact_plate_accuracy": ratio(exact, sum(bool(normalize(row["plate_number"])) for row in target_events)),
         "character_accuracy": ratio(characters, total_characters),
+        "automatic_accepts": {
+            "total": automatic_total,
+            "correct_plate": automatic_correct,
+            "wrong_plate": automatic_wrong,
+            "false_movement": automatic_extra if complete else None,
+            "unscored": automatic_total - automatic_correct - automatic_wrong - automatic_extra,
+        },
         "manual_review_rate": ratio(sum(event["verification_status"] == "PENDING" for event in events), len(events)),
     }
+
+
+def score_files(truth_path: Path, tracks_path: Path, outbox: Path,
+                overlap: float = 0.5, tolerance: int = 6) -> dict:
+    truth = json.loads(truth_path.read_text(encoding="utf-8"))
+    tracking = [json.loads(line) for line in tracks_path.read_text(encoding="utf-8").splitlines()]
+    paths = {path.name: path for root in (outbox, outbox / ".sent") for path in root.glob("*.json")}
+    events = [json.loads(paths[name].read_text(encoding="utf-8")) for name in sorted(paths)]
+    return evaluate(truth, tracking, events, overlap, tolerance)
 
 
 def main() -> None:
@@ -130,11 +158,7 @@ def main() -> None:
     args = parser.parse_args()
     if not 0 < args.iou <= 1 or args.frame_tolerance < 0:
         parser.error("Use an IoU in (0, 1] and a nonnegative frame tolerance.")
-    truth = json.loads(args.truth.read_text(encoding="utf-8"))
-    tracking = [json.loads(line) for line in args.tracks.read_text(encoding="utf-8").splitlines()]
-    paths = {path.name: path for root in (args.outbox, args.outbox / ".sent") for path in root.glob("*.json")}
-    events = [json.loads(paths[name].read_text(encoding="utf-8")) for name in sorted(paths)]
-    print(json.dumps(evaluate(truth, tracking, events, args.iou, args.frame_tolerance), indent=2))
+    print(json.dumps(score_files(args.truth, args.tracks, args.outbox, args.iou, args.frame_tolerance), indent=2))
 
 
 if __name__ == "__main__":

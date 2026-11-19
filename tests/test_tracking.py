@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from vision.run_video import main
+from vision.run_video import main, parse_args
 from vision.sources.file_source import FileVideoSource
 from vision.tracks import BoundingBox, TrackHistory, Vehicle
 
@@ -44,6 +44,12 @@ def test_history_survives_temporary_miss_and_expires() -> None:
     history.update(24, [car(13, 10)])
     assert set(history.tracks) == {13}
     assert history.tracks[13].previous is None
+
+
+def test_cli_can_override_cross_class_suppression(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("YOLO_AGNOSTIC_NMS", "true")
+    assert parse_args(["sample.mp4", "--track"]).agnostic_nms is True
+    assert parse_args(["sample.mp4", "--track", "--no-agnostic-nms"]).agnostic_nms is False
 
 
 def test_real_yolo_and_bytetrack_demo(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

@@ -47,6 +47,26 @@ $env:CAMERA_SOURCE_SAMPLE = "data/videos/anpr-demo-video.mp4"
 
 The reference time in this demo exercises historical playback. For your own MP4, supply its actual recording start with a UTC offset. Without a start time, the standalone player can report frame-relative time, and the uploader holds timestamp-less events for correction. Confirm that submitted crossings appear in **Recognition review**, inspect the evidence, and enter a verified registration if the plate is readable. The public clip contains foreign plates; the default rules require review for unrecognized formats and ambiguous vehicle associations.
 
+To follow one vehicle across **Gate IN**, **Yard Camera**, and **Gate OUT**, run the [three-camera replay](validation/README.md#three-camera-replay). The dashboard's **Vehicle tracking** page shows the latest confirmed camera, recent camera history, and the latest visit status.
+
+### Vehicle details and parking search
+
+Search a registration in **Vehicle tracking** to see the last confirmed camera, its configured area, entry and exit times, elapsed time on site, and past visits. An administrator can set a camera area under **Camera administration**.
+
+An operator can confirm a zone and optional bay for an open visit. A later confirmed camera event marks the parking record for reconfirmation. An exit makes the parking record historical. A new visit starts with its own parking record.
+
+Administrators can add or edit site records by registration. Available fields include the owner or department, manufacturer, model, color, fuel type, PUC certificate number, and expiry dates for registration, PUC, insurance, and fitness. Owner or department is visible only to administrators. Expiry labels use the configured site date and the dates saved in the site record.
+
+| Official service | How to use it |
+| --- | --- |
+| [VAHAN vehicle services](https://vahan.parivahan.gov.in/nrservices/faces/user/login.xhtml) | Use the official sign-in and lookup for the vehicle details available to your account. |
+| [Parivahan PUC certificate lookup](https://puc.parivahan.gov.in/puc/views/PucCertificate.xhtml) | Check a Pollution Under Control certificate through the official form. |
+| [API Setu](https://apisetu.gov.in/) | Check catalogue access and ask the provider which vehicle or document fields your organization can access and store. |
+
+An administrator can use **Vehicle tracking → Record official check** after checking the registration on the official site. Select **VAHAN registration (RC)** or **Parivahan pollution certificate (PUCC)**, copy the registration shown, and enter the fields you checked. The dashboard records the service and check time for each supplied field. Use **Edit details** for site-entered information, including the owner or department.
+
+An approved integration can submit the same normalized fields to `POST /api/v1/vehicles/{plate}/registry-check` with an administrator account. The service limits the accepted fields, requires the registration to match, and rejects an older check that would overwrite a newer edit. Omit fields missing from the provider response. For exact retries, include the original `checked_at` timestamp with its UTC offset. The endpoint accepts already obtained details. Live retrieval requires an approved external service. [API Setu request and example](validation/registry-access.md)
+
 If the build runs behind an HTTPS proxy, use the [optional Compose override](docker-compose.ca.yml) with the site's trusted PEM bundle. The bundle is mounted during the build.
 
 ```powershell
@@ -70,6 +90,8 @@ Use **Q**, **Esc**, or close the native window to stop. Set `--speed 0.5` for ha
 Tripwire coordinates are in source pixels and line direction runs from the first point to the second. **Automatic** uses the signed side of the vehicle's bottom-centre point. Flip `--entry-side negative` to invert the direction mapping. A finite intersection, deadband, minimum movement, confirmation count, maximum observation gap, and cooldown govern crossings. Adjust `TRIPWIRE_*` and the [ByteTrack settings](config/bytetrack.yaml) after checking footage at each gate.
 
 The tracker filters for car, motorcycle, bus, and truck. A track ID is local to the stream and may change after occlusion or reconnect. A larger sampling interval reduces inference work and increases the time between observations. Exported telemetry retains original source-frame indices.
+
+Use `--agnostic-nms` or set `YOLO_AGNOSTIC_NMS=true` to suppress overlapping boxes across vehicle categories. Re-score the camera after enabling it because close vehicles can overlap in the image.
 
 ## 4. Recognition, API, and session behavior
 
@@ -134,6 +156,8 @@ The first test run covers the offline components. GitHub Actions runs vision and
 ```
 
 On the target machine, keep the annotated replay, OCR outbox, and ground truth for each camera and recording together. Verify the first intersection in each direction and confirm the resulting IN and OUT events in Movement history before scoring the full recording. Use a separate outbox per evaluation recording. Label every crossing before setting `crossings_complete` to true. The public fixture contains six vehicle boxes, one plate box, and one crossing. It exercises the scoring path without making a site-accuracy claim.
+
+See the [public-footage benchmark](validation/README.md) for licensed traffic clips, reproducible scoring, and remaining acceptance work.
 
 ## Milestone status
 

@@ -27,6 +27,7 @@ class VehicleTracker:
         iou: float,
         history_size: int,
         max_misses: int,
+        agnostic_nms: bool = False,
     ) -> None:
         if not weights.is_file():
             raise ValueError(
@@ -58,6 +59,7 @@ class VehicleTracker:
         self._image_size = image_size
         self._confidence = confidence
         self._iou = iou
+        self._agnostic_nms = agnostic_nms
         self.history = TrackHistory(history_size, max_misses)
         self._class_counts: Counter[str] = Counter()
         self._samples = 0
@@ -83,6 +85,7 @@ class VehicleTracker:
             classes=list(COCO_VEHICLES),
             conf=self._confidence,
             iou=self._iou,
+            agnostic_nms=self._agnostic_nms,
             imgsz=self._image_size,
             device=self._device,
             verbose=False,
@@ -120,6 +123,7 @@ class VehicleTracker:
         return {
             "device": self._device,
             "configured_image_size": self._image_size,
+            "agnostic_nms": self._agnostic_nms,
             "inference_calls": samples,
             "boxes_by_class": dict(self._class_counts),
             "tracked_boxes": self._tracked_boxes,

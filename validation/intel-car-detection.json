@@ -1,0 +1,22 @@
+{
+  "source": "Intel IoT Developer Kit sample-videos/car-detection.mp4, CC BY 4.0",
+  "tripwire": [0, 216, 767, 216],
+  "crossings_complete": true,
+  "vehicles": [
+    {"frame_number": 84, "object_id": "white-hatchback", "vehicle_type": "car", "bbox": [268, 35, 427, 273]},
+    {"frame_number": 88, "object_id": "white-hatchback", "vehicle_type": "car", "bbox": [268, 0, 422, 215]},
+    {"frame_number": 198, "object_id": "silver-sedan", "vehicle_type": "car", "bbox": [117, 0, 260, 223]},
+    {"frame_number": 202, "object_id": "silver-sedan", "vehicle_type": "car", "bbox": [109, 18, 258, 282]},
+    {"frame_number": 214, "object_id": "red-sedan", "vehicle_type": "car", "bbox": [310, 55, 468, 308]},
+    {"frame_number": 220, "object_id": "red-sedan", "vehicle_type": "car", "bbox": [307, 0, 455, 213]},
+    {"frame_number": 326, "object_id": "white-sedan", "vehicle_type": "car", "bbox": [149, 0, 328, 215]},
+    {"frame_number": 330, "object_id": "white-sedan", "vehicle_type": "car", "bbox": [131, 15, 319, 313]}
+  ],
+  "plates": [],
+  "crossings": [
+    {"frame_number": 88, "object_id": "white-hatchback", "direction": "OUT", "plate_number": null},
+    {"frame_number": 198, "object_id": "silver-sedan", "direction": "IN", "plate_number": null},
+    {"frame_number": 220, "object_id": "red-sedan", "direction": "OUT", "plate_number": null},
+    {"frame_number": 327, "object_id": "white-sedan", "direction": "IN", "plate_number": null}
+  ]
+}

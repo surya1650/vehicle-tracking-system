@@ -23,8 +23,15 @@ def audit(db: Session, actor: str, action: str, **details) -> None:
 
 
 def ensure_vehicle(db: Session, plate: str, category: str | None) -> None:
-    db.execute(insert(Vehicle).values(registration_number=plate, vehicle_type=category)
-               .on_conflict_do_nothing(index_elements=[Vehicle.registration_number]))
+    vehicle = insert(Vehicle).values(registration_number=plate, vehicle_type=category)
+    if category is None:
+        db.execute(vehicle.on_conflict_do_nothing(index_elements=[Vehicle.registration_number]))
+    else:
+        db.execute(vehicle.on_conflict_do_update(
+            index_elements=[Vehicle.registration_number],
+            set_={"vehicle_type": category},
+            where=Vehicle.vehicle_type.is_(None),
+        ))
 
 
 def rebuild_sessions(db: Session, plate: str) -> None:
@@ -32,7 +39,7 @@ def rebuild_sessions(db: Session, plate: str) -> None:
     db.execute(delete(VehicleSession).where(VehicleSession.registration_number == plate))
     db.execute(delete(Alert).where(Alert.registration_number == plate))
     events = db.scalars(
-        select(Event).where(Event.registration_number == plate)
+        select(Event).where(Event.registration_number == plate, Event.direction.in_(("IN", "OUT")))
         .order_by(Event.timestamp, Event.event_uuid)
     )
     inside = None
@@ -77,6 +84,9 @@ def save_event(db: Session, source: EventIn | ToggleIn, actor: str) -> tuple[Eve
     camera = db.get(Camera, source.camera_id)
     if camera is None or camera.gate_id != source.gate_id:
         raise HTTPException(422, "Camera and gate must be registered and match.")
+    sighting = isinstance(source, EventIn) and source.direction == "SIGHTING"
+    if (camera.direction == "TRACKING") != sighting:
+        raise HTTPException(422, "Tracking cameras record sightings. Gate cameras record entries and exits.")
     plate = source.plate_number if toggle or source.verification_status == "AUTO" else None
     if plate is not None:
         lock(db, [f"plate:{plate}"])
@@ -114,7 +124,7 @@ def save_event(db: Session, source: EventIn | ToggleIn, actor: str) -> tuple[Eve
     for kind, path in (("vehicle", data.snapshot_path), ("plate", data.plate_crop_path)):
         if path:
             db.add(Snapshot(event_uuid=event.event_uuid, kind=kind, path=path))
-    if plate:
+    if plate and not sighting:
         rebuild_sessions(db, plate)
     audit(db, actor, "event_submitted", event_uuid=str(event.event_uuid))
     return event, True
@@ -134,8 +144,9 @@ def verify_event(db: Session, source: VerifyIn, actor: str) -> Event:
     event.registration_number = source.plate_number
     event.verification_status = "VERIFIED"
     db.flush()
-    for plate in plates:
-        rebuild_sessions(db, plate)
+    if event.direction != "SIGHTING":
+        for plate in plates:
+            rebuild_sessions(db, plate)
     audit(db, actor, "plate_verified", event_uuid=str(event.event_uuid),
           previous_registration=old, raw_proposal=event.plate_number,
           registration=source.plate_number, notes=source.notes)

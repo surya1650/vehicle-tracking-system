@@ -5,8 +5,8 @@ import {
 } from "./api";
 
 export function Badge({ value }: { value: string }) {
-  const kind = ["ACTIVE", "IN", "AUTO", "VERIFIED", "INSIDE", "MATCHED"].includes(value) ? "positive"
-    : ["PENDING", "RECONNECTING", "AMBIGUOUS"].includes(value) ? "warning"
+  const kind = ["ACTIVE", "IN", "AUTO", "VERIFIED", "INSIDE", "MATCHED", "VALID"].includes(value) ? "positive"
+    : ["PENDING", "RECONNECTING", "AMBIGUOUS", "EXPIRED", "NEEDS_RECONFIRMATION"].includes(value) ? "warning"
     : ["OUT", "EXITED"].includes(value) ? "info" : "neutral";
   const label = ({ IN: "Entry", OUT: "Exit", AUTO: "Automatic", PENDING: "Needs review" } as Record<string, string>)[value] || readable(value);
   return <span className={`badge ${kind}`}>{value === "IN" && <ArrowDownLeft size={13} />}{value === "OUT" && <ArrowUpRight size={13} />}{label}</span>;
@@ -40,7 +40,7 @@ export function Pager({ page, length, size, onPage }: {
 }
 
 export function EventTable({ rows, onEvent }: { rows: EventRow[]; onEvent: (id: string) => void }) {
-  if (!rows.length) return <Empty title="No movements found" detail="New events will appear here when a vehicle crosses a monitored gate." />;
+  if (!rows.length) return <Empty title="No events found" />;
   return <div className="table-wrap"><table>
     <thead><tr><th>Registration</th><th>Movement</th><th>Gate</th><th>Recorded at</th><th>Verification</th><th>OCR confidence</th><th><span className="sr-only">Details</span></th></tr></thead>
     <tbody>{rows.map(row => <tr key={row.event_uuid}>

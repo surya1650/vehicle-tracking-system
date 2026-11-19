@@ -1,4 +1,4 @@
-import { ArrowRight, Camera, CarFront, ClipboardCheck, History as HistoryIcon, LayoutDashboard, LogOut, ParkingSquare, Settings } from "lucide-react";
+import { ArrowRight, Camera, CarFront, ClipboardCheck, History as HistoryIcon, LayoutDashboard, LogOut, ParkingSquare, Route, Settings } from "lucide-react";
 import { createRoot } from "react-dom/client";
 import { useEffect, useState, type FormEvent } from "react";
 import { request, type Credential } from "./api";
@@ -6,11 +6,13 @@ import { Cameras, Live } from "./Cameras";
 import { ErrorNote } from "./components";
 import { EventPanel, History, Inside } from "./Movements";
 import { Overview } from "./Overview";
+import { VehicleTracking } from "./VehicleTracking";
 import "./styles.css";
 
 const navigation = [
   { key: "overview", label: "Overview", icon: LayoutDashboard },
   { key: "live", label: "Live monitoring", icon: Camera },
+  { key: "tracking", label: "Vehicle tracking", icon: Route },
   { key: "inside", label: "Vehicles inside", icon: ParkingSquare },
   { key: "history", label: "Movement history", icon: HistoryIcon },
   { key: "review", label: "Recognition review", icon: ClipboardCheck },
@@ -63,6 +65,7 @@ function App() {
   const [page, setPage] = useState<Page>("overview");
   const [revision, setRevision] = useState(0);
   const [event, setEvent] = useState<string | null>(null);
+  const [liveCamera, setLiveCamera] = useState("");
   function signOut() {
     sessionStorage.removeItem(SESSION);
     setCredential(null);
@@ -82,7 +85,10 @@ function App() {
   return <div className="shell">
     <aside className="sidebar"><Logo /><nav aria-label="Main navigation">
       {navigation.map(({ key, label, icon: Icon }) => <button key={key} aria-label={label} aria-current={page === key ? "page" : undefined}
-        className={page === key ? "active" : ""} onClick={() => setPage(key)}><Icon size={18} /><span>{label}</span></button>)}
+        className={page === key ? "active" : ""} onClick={() => {
+          if (key === "live" && page !== "live") setLiveCamera("");
+          setPage(key);
+        }}><Icon size={18} /><span>{label}</span></button>)}
     </nav></aside>
     <div className="workspace"><header className="topbar">
       <span>{navigation.find(item => item.key === page)?.label}</span>
@@ -92,7 +98,11 @@ function App() {
     </header>
       <main className="content">
         {page === "overview" && <Overview token={token} revision={revision} refresh={refresh} selectEvent={setEvent} />}
-        {page === "live" && <Live token={token} selectEvent={setEvent} />}
+        {page === "live" && <Live token={token} selectEvent={setEvent} initialCamera={liveCamera} />}
+        {page === "tracking" && <VehicleTracking token={token} role={credential.role} revision={revision} selectEvent={setEvent} openCamera={id => {
+          setLiveCamera(id);
+          setPage("live");
+        }} />}
         {page === "inside" && <Inside token={token} revision={revision} selectEvent={setEvent} />}
         {page === "history" && <History key="history" token={token} revision={revision} selectEvent={setEvent} />}
         {page === "review" && <History key="review" review token={token} revision={revision} selectEvent={setEvent} />}

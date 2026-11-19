@@ -20,5 +20,16 @@ def test_complete_and_partial_ground_truth():
     assert results["plate_association_accuracy_on_detected_plates"]["rate"] == 1
     assert results["exact_plate_accuracy"]["rate"] == 0
     assert results["character_accuracy"]["rate"] == 0.9
+    assert results["automatic_accepts"]["total"] == 0
+    automatic = evaluate(truth, tracking, [
+        {**event, "verification_status": "AUTO"},
+        {**event, "verification_status": "AUTO", "frame_number": 500},
+    ])
+    assert automatic["automatic_accepts"] == {
+        "total": 2, "correct_plate": 0, "wrong_plate": 1, "false_movement": 1, "unscored": 0,
+    }
+    wrong_vehicle = evaluate(truth, tracking, [{**event, "track_id": 3}])
+    assert wrong_vehicle["crossing_recall"]["matched"] == 0
+    assert wrong_vehicle["false_movement_rate"]["matched"] == 1
     truth["crossings_complete"] = False
     assert evaluate(truth, tracking, [event])["crossing_precision"] is None

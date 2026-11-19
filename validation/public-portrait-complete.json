@@ -1,0 +1,128 @@
+{
+  "source": "Ultralytics anpr-demo-video.mp4, 1080x1920, full crossing review",
+  "tripwire": [
+    0,
+    1050,
+    1080,
+    1050
+  ],
+  "crossings_complete": true,
+  "vehicles": [
+    {
+      "frame_number": 30,
+      "object_id": "silver-car",
+      "vehicle_type": "car",
+      "bbox": [
+        190,
+        766,
+        564,
+        1050
+      ]
+    },
+    {
+      "frame_number": 60,
+      "object_id": "silver-car",
+      "vehicle_type": "car",
+      "bbox": [
+        206,
+        812,
+        704,
+        1192
+      ]
+    },
+    {
+      "frame_number": 90,
+      "object_id": "silver-car",
+      "vehicle_type": "car",
+      "bbox": [
+        320,
+        858,
+        1080,
+        1418
+      ]
+    },
+    {
+      "frame_number": 30,
+      "object_id": "red-truck",
+      "vehicle_type": "truck",
+      "bbox": [
+        218,
+        440,
+        610,
+        876
+      ]
+    },
+    {
+      "frame_number": 60,
+      "object_id": "red-truck",
+      "vehicle_type": "truck",
+      "bbox": [
+        190,
+        432,
+        636,
+        874
+      ]
+    },
+    {
+      "frame_number": 90,
+      "object_id": "red-truck",
+      "vehicle_type": "truck",
+      "bbox": [
+        186,
+        418,
+        666,
+        992
+      ]
+    },
+    {
+      "frame_number": 111,
+      "object_id": "red-truck",
+      "vehicle_type": "truck",
+      "bbox": [
+        188,
+        406,
+        684,
+        1052
+      ]
+    },
+    {
+      "frame_number": 117,
+      "object_id": "red-truck",
+      "vehicle_type": "truck",
+      "bbox": [
+        190,
+        391,
+        705,
+        1070
+      ]
+    }
+  ],
+  "plates": [
+    {
+      "frame_number": 30,
+      "object_id": "silver-car",
+      "plate_number": "3066MP4",
+      "bbox": [
+        330,
+        962,
+        444,
+        1000
+      ]
+    }
+  ],
+  "crossings": [
+    {
+      "frame_number": 34,
+      "object_id": "silver-car",
+      "direction": "IN",
+      "plate_number": "3066MP4"
+    },
+    {
+      "frame_number": 114,
+      "object_id": "red-truck",
+      "direction": "IN",
+      "plate_number": null
+    }
+  ],
+  "crossing_label_notes": "The foreground taxi starts beyond the tripwire. The silver car and red truck cross once each. Frame numbers are visual estimates from vehicle silhouettes near the line where tires merge into shadows."
+}

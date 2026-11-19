@@ -75,3 +75,10 @@ def test_reverse_after_cooldown_is_a_new_event():
 def test_line_touch_does_not_cross():
     wire = Tripwire(TripwireConfig((0, 0), (100, 0)), ID)
     assert not feed(wire, [[(10, y)] for y in (-10, -2, 0, -2, -10)])
+
+
+@pytest.mark.parametrize("side", [-1, 1])
+def test_tracking_tripwire_reports_sightings_in_either_direction(side):
+    wire = Tripwire(TripwireConfig((0, 0), (100, 0), mode="TRACKING"), ID)
+    sighting, = feed(wire, [[(50, side * y)] for y in (-10, 10, 12)])
+    assert sighting.direction == Direction.SIGHTING

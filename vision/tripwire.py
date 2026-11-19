@@ -13,6 +13,7 @@ from vision.tracks import Point, Vehicle
 class Direction(StrEnum):
     IN = "IN"
     OUT = "OUT"
+    SIGHTING = "SIGHTING"
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,8 +36,8 @@ class TripwireConfig:
         if (min(self.deadband, self.min_movement, self.cooldown) < 0
                 or self.confirmation < 1 or self.max_gap <= 0):
             raise ValueError("Invalid tripwire confirmation, movement, or timing settings.")
-        if self.mode not in ("AUTO", "ENTRY", "EXIT"):
-            raise ValueError("Tripwire mode must be AUTO, ENTRY or EXIT.")
+        if self.mode not in ("AUTO", "ENTRY", "EXIT", "TRACKING"):
+            raise ValueError("Tripwire mode must be AUTO, ENTRY, EXIT or TRACKING.")
 
     @classmethod
     def from_coordinates(cls, value: str, **settings) -> "TripwireConfig":
@@ -122,6 +123,8 @@ class Tripwire:
             return Direction.IN
         if self.config.mode == "EXIT":
             return Direction.OUT
+        if self.config.mode == "TRACKING":
+            return Direction.SIGHTING
         return Direction.IN if (side > 0) == self.config.positive_is_entry else Direction.OUT
 
     def _observe(self, track_id: int, observation: Observation) -> Crossing | None:

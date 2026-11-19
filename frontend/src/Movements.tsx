@@ -35,13 +35,13 @@ export function History({ token, review = false, revision, selectEvent }: {
   }
   return <>
     <header className="page-heading"><div><h1>{review ? "Recognition review" : "Movement history"}</h1>
-      <p>{review ? "Inspect plate evidence and verify unresolved crossings." : "Search and filter the recorded entry and exit ledger."}</p></div></header>
+      <p>{review ? "Inspect plate evidence and verify unresolved events." : "Search entries, exits, and camera sightings."}</p></div></header>
     {!review && <form className="card filter-card" onSubmit={apply}>
       <label>Registration<div className="input-icon"><Search size={16} /><input placeholder="Search plates" value={filters.plate}
         onChange={e => change("plate", e.target.value)} maxLength={24} /></div></label>
       <label>Gate<input value={filters.gate} onChange={e => change("gate", e.target.value)} placeholder="All gates" /></label>
       <label>Direction<select value={filters.direction} onChange={e => change("direction", e.target.value)}>
-        <option value="">All movements</option><option value="IN">Entry</option><option value="OUT">Exit</option>
+        <option value="">All movements</option><option value="IN">Entry</option><option value="OUT">Exit</option><option value="SIGHTING">Sighting</option>
       </select></label>
       <label>Verification<select value={filters.verification} onChange={e => change("verification", e.target.value)}>
         <option value="">All states</option><option value="PENDING">Needs review</option><option value="AUTO">Automatic</option><option value="VERIFIED">Verified</option>
@@ -84,7 +84,9 @@ export function Inside({ token, revision, selectEvent }: {
   </>;
 }
 
-function VerificationForm({ row, token, onSaved }: { row: EventDetail; token: string; onSaved: () => void }) {
+function VerificationForm({ row, token, onSaved }: {
+  row: EventDetail; token: string; onSaved: (event: EventDetail) => void;
+}) {
   const [plate, setPlate] = useState(row.registration_number || row.plate_number || "");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -95,11 +97,11 @@ function VerificationForm({ row, token, onSaved }: { row: EventDetail; token: st
     setSaving(true);
     setError("");
     try {
-      await request("/events/manual-verify", token, {
+      const verified = await request<EventDetail>("/events/manual-verify", token, {
         method: "POST", body: JSON.stringify({ event_uuid: row.event_uuid, plate_number: plate, notes }),
       });
       setSaved(true);
-      onSaved();
+      onSaved(verified);
     } catch (error) {
       setError((error as Error).message);
     } finally {
@@ -118,8 +120,9 @@ function VerificationForm({ row, token, onSaved }: { row: EventDetail; token: st
 export function EventPanel({ id, token, operator, close, onSaved }: {
   id: string; token: string; operator: boolean; close: () => void; onSaved: () => void;
 }) {
-  const [revision, refresh] = useState(0);
-  const { data, error } = useResource<EventDetail>(`/events/${id}`, token, 0, revision);
+  const [verified, setVerified] = useState<EventDetail>();
+  const { data: original, error } = useResource<EventDetail>(`/events/${id}`, token);
+  const data = verified ?? original;
   return <Dialog title="Movement details" close={close}>
     {error && <ErrorNote message={error} />}
     {data ? <>
@@ -137,7 +140,10 @@ export function EventPanel({ id, token, operator, close, onSaved }: {
           <td>{item.normalized_text || "—"}{!item.valid_format && item.normalized_text && <div className="subtle">Format needs review</div>}</td>
           <td>{percent(item.ocr_confidence)}</td><td>{percent(item.plate_confidence)}</td><td><Badge value={item.association} /></td></tr>)}</tbody>
       </table></div> : <Empty title="No plate observations recorded" />}
-      {operator && <VerificationForm row={data} token={token} onSaved={() => { refresh(value => value + 1); onSaved(); }} />}
+      {operator && <VerificationForm row={data} token={token} onSaved={updated => {
+        setVerified(updated);
+        onSaved();
+      }} />}
     </> : !error && <Empty title="Loading movement details" />}
   </Dialog>;
 }

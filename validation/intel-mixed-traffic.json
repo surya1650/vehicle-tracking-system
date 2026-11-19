@@ -1,0 +1,17 @@
+{
+  "source": "Intel IoT Developer Kit sample-videos/person-bicycle-car-detection.mp4, CC BY 4.0",
+  "tripwire": [0, 260, 767, 260],
+  "crossings_complete": true,
+  "vehicles": [
+    {"frame_number": 210, "object_id": "white-estate", "vehicle_type": "car", "bbox": [10, 108, 202, 256]},
+    {"frame_number": 214, "object_id": "white-estate", "vehicle_type": "car", "bbox": [0, 108, 174, 245]},
+    {"frame_number": 556, "object_id": "blue-sedan", "vehicle_type": "car", "bbox": [147, 119, 278, 306]},
+    {"frame_number": 560, "object_id": "blue-sedan", "vehicle_type": "car", "bbox": [140, 97, 271, 269]},
+    {"frame_number": 564, "object_id": "blue-sedan", "vehicle_type": "car", "bbox": [117, 76, 260, 229]}
+  ],
+  "plates": [],
+  "crossings": [
+    {"frame_number": 209, "object_id": "white-estate", "direction": "OUT", "plate_number": null},
+    {"frame_number": 561, "object_id": "blue-sedan", "direction": "OUT", "plate_number": null}
+  ]
+}

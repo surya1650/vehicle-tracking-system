@@ -1,0 +1,34 @@
+{
+  "source": "Intel IoT Developer Kit car-detection.mp4, CC BY 4.0",
+  "sha256": "d31e0ebf194cc16e50eea784e7c3b0b1bb7976a4fb9b3fec26cb92a6704cca34",
+  "notes": "Pixel boxes labelled by visual inspection. Positive frames show only the first hatchback or last white car. The two cars crossing in the middle and all frames from the other recordings are excluded from fitting.",
+  "train": {
+    "66": [274, 246, 478, 432],
+    "69": [272, 206, 479, 432],
+    "75": [270, 124, 459, 426],
+    "78": [266, 92, 446, 376],
+    "81": [263, 60, 437, 320],
+    "87": [269, 1, 421, 227],
+    "90": [272, 0, 410, 187],
+    "96": [280, 0, 405, 118],
+    "99": [286, 0, 402, 85],
+    "101": [285, 0, 399, 65],
+    "145": null,
+    "274": null,
+    "318": [194, 0, 317, 48],
+    "321": [178, 0, 322, 110],
+    "324": [164, 0, 324, 169],
+    "333": [125, 65, 309, 397],
+    "336": [110, 134, 307, 432],
+    "339": [101, 199, 303, 432],
+    "345": [112, 350, 304, 432],
+    "350": null
+  },
+  "val": {
+    "17": null,
+    "72": [268, 162, 472, 432],
+    "93": [276, 0, 409, 154],
+    "327": [150, 0, 321, 235],
+    "342": [105, 271, 301, 432]
+  }
+}

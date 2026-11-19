@@ -22,11 +22,13 @@ from backend.auth import PASSWORDS, issue, signing_key, subject, unauthorized
 from backend.database import make_sessions
 from backend.models import Alert, Camera, Event, Gate, Snapshot, User, Vehicle
 from backend.movements import audit, save_event, verify_event
-from backend.queries import camera_out, event_detail, events_out, sessions_out, summary
+from backend.queries import camera_out, event_detail, events_out, profile_out, sessions_out, summary, vehicle_route
 from backend.schemas import (
-    AlertOut, CameraIn, CameraOut, EventDetail, EventIn, EventOut, Heartbeat,
-    Identifier, Login, Plate, SessionOut, ToggleIn, Token, VerifyIn,
+    AlertOut, CameraIn, CameraOut, EventDetail, EventDirection, EventIn, EventOut, Heartbeat,
+    Identifier, Login, ParkingIn, Plate, RegistryCheckIn, SessionOut, ToggleIn, Token,
+    VehicleProfileIn, VehicleProfileOut, VehicleRoute, VerifyIn,
 )
+from backend.site_records import save_parking, save_profile
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -133,6 +135,8 @@ def create_app() -> FastAPI:
         db.execute(insert(Gate).values(id=body.gate_id, name=body.gate_name or body.gate_id)
                    .on_conflict_do_nothing(index_elements=[Gate.id]))
         values = body.model_dump(mode="json", exclude={"gate_name"})
+        if "area" not in body.model_fields_set:
+            values.pop("area")
         db.execute(insert(Camera).values(**values).on_conflict_do_update(
             index_elements=[Camera.id], set_={key: value for key, value in values.items() if key != "id"},
         ))
@@ -198,7 +202,7 @@ def create_app() -> FastAPI:
     @app.get("/api/v1/vehicles/history", response_model=list[EventOut])
     def event_list(
         db: Db, _user: Reader, plate: Annotated[str, Query(max_length=24)] = "",
-        gate: Identifier | None = None, camera: Identifier | None = None, direction: Literal["IN", "OUT"] | None = None,
+        gate: Identifier | None = None, camera: Identifier | None = None, direction: EventDirection | None = None,
         verification: Literal["AUTO", "PENDING", "VERIFIED"] | None = None,
         since: AwareDatetime | None = None, until: AwareDatetime | None = None,
         limit: Limit = 50, offset: Offset = 0,
@@ -244,6 +248,39 @@ def create_app() -> FastAPI:
     @app.get("/api/v1/vehicles/sessions", response_model=list[SessionOut])
     def vehicle_sessions(db: Db, _user: Reader, limit: Limit = 50, offset: Offset = 0):
         return sessions_out(db, False, limit, offset)
+
+    @app.get("/api/v1/vehicles/{plate_number}/route", response_model=VehicleRoute)
+    def route(plate_number: Plate, db: Db, user: Reader, limit: Limit = 50):
+        record = db.get(Vehicle, plate_number)
+        if record is None:
+            raise HTTPException(404, "Vehicle not found.")
+        return vehicle_route(db, record, limit, datetime.now(zone), user.role == "ADMIN")
+
+    @app.get("/api/v1/vehicles/{plate_number}/visits", response_model=list[SessionOut])
+    def visits(plate_number: Plate, db: Db, _user: Reader, limit: Limit = 50, offset: Offset = 0):
+        return sessions_out(db, False, limit, offset, plate=plate_number)
+
+    @app.patch("/api/v1/vehicles/{plate_number}/profile", response_model=VehicleProfileOut)
+    def update_profile(plate_number: Plate, body: VehicleProfileIn, db: Db, actor: Admin):
+        record = save_profile(db, plate_number, body.model_dump(exclude_unset=True), actor.username)
+        db.commit()
+        return profile_out(record, show_owner=True)
+
+    @app.post("/api/v1/vehicles/{plate_number}/registry-check", response_model=VehicleProfileOut)
+    def record_registry_check(plate_number: Plate, body: RegistryCheckIn, db: Db, actor: Admin):
+        if body.registration_number != plate_number:
+            raise HTTPException(422, "The registration on the official record must match the searched vehicle.")
+        record = save_profile(
+            db, plate_number, body.details.model_dump(exclude_unset=True), actor.username,
+            service=body.service, checked_at=body.checked_at,
+        )
+        db.commit()
+        return profile_out(record, show_owner=True)
+
+    @app.put("/api/v1/vehicles/{plate_number}/parking", status_code=204)
+    def update_parking(plate_number: Plate, body: ParkingIn, db: Db, actor: Operator):
+        save_parking(db, plate_number, body, actor.username)
+        db.commit()
 
     @app.get("/api/v1/vehicles/{plate_number}", response_model=list[EventOut])
     def vehicle(plate_number: Plate, db: Db, _user: Reader, limit: Limit = 50, offset: Offset = 0):

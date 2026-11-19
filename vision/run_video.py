@@ -100,6 +100,10 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     )
     tracking.add_argument("--iou", type=probability, default=setting("YOLO_IOU", "0.7"))
     tracking.add_argument(
+        "--agnostic-nms", action=argparse.BooleanOptionalAction,
+        help="Suppress overlapping detections across vehicle classes",
+    )
+    tracking.add_argument(
         "--inference-interval", type=positive_int, default=setting("YOLO_INFERENCE_INTERVAL", "1"),
         help="Run detection/tracking every N source frames (default: 1)",
     )
@@ -121,7 +125,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     wire = parser.add_argument_group("tripwire")
     wire.add_argument("--tripwire", default=setting("TRIPWIRE_POINTS"), help="x1,y1,x2,y2")
     wire.add_argument("--tripwire-mode", default=setting("TRIPWIRE_MODE", "AUTO"),
-                      choices=("AUTO", "ENTRY", "EXIT"))
+                      choices=("AUTO", "ENTRY", "EXIT", "TRACKING"))
     wire.add_argument("--entry-side", default=setting("TRIPWIRE_ENTRY_SIDE", "positive"),
                       choices=("positive", "negative"))
     wire.add_argument("--wire-deadband", type=float, default=setting("TRIPWIRE_DEADBAND", "4"))
@@ -152,6 +156,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     anpr.set_defaults(plate_formats_env=setting("PLATE_FORMATS"))
 
     args = parser.parse_args(argv)
+    if args.agnostic_nms is None:
+        nms_setting = (setting("YOLO_AGNOSTIC_NMS", "false") or "").strip().lower()
+        if nms_setting not in ("true", "false"):
+            parser.error("YOLO_AGNOSTIC_NMS must be true or false.")
+        args.agnostic_nms = nms_setting == "true"
     if bool(args.video) == bool(args.rtsp_source):
         parser.error("Choose a local video or --rtsp-source.")
     if args.rtsp_source and not re.fullmatch(r"CAMERA_SOURCE_[A-Z0-9_]{1,49}", args.rtsp_source):
@@ -171,7 +180,7 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
         parser.error("--output must be an MP4 filename.")
     if (args.tripwire and not args.track) or (args.crossings_jsonl and not args.tripwire):
         parser.error("A tripwire requires --track; --crossings-jsonl also requires a tripwire.")
-    if args.tripwire_mode not in ("AUTO", "ENTRY", "EXIT") or args.entry_side not in ("positive", "negative"):
+    if args.tripwire_mode not in ("AUTO", "ENTRY", "EXIT", "TRACKING") or args.entry_side not in ("positive", "negative"):
         parser.error("Invalid tripwire mode or entry side.")
     if args.anpr and not args.tripwire:
         parser.error("--anpr requires a tripwire.")
@@ -250,6 +259,7 @@ def run(args: argparse.Namespace) -> dict[str, object]:
                 weights=args.weights, tracker_config=args.tracker_config,
                 device=args.device, image_size=args.image_size, confidence=args.confidence,
                 iou=args.iou, history_size=args.history_size, max_misses=args.history_max_misses,
+                agnostic_nms=args.agnostic_nms,
             )
 
         wire = None

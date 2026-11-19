@@ -1,6 +1,6 @@
 """PostgreSQL schema for events, evidence, and the derived visit history."""
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, String, Text, UniqueConstraint, func, text
@@ -21,7 +21,8 @@ class Camera(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(120))
     gate_id: Mapped[str] = mapped_column(ForeignKey("gates.id"), index=True)
-    direction: Mapped[str] = mapped_column(String(5))
+    area: Mapped[str | None] = mapped_column(String(120))
+    direction: Mapped[str] = mapped_column(String(8))
     entry_side: Mapped[str] = mapped_column(String(8), server_default="positive")
     source_binding: Mapped[str | None] = mapped_column(String(64))
     width: Mapped[int | None]
@@ -39,13 +40,24 @@ class Vehicle(Base):
     vehicle_type: Mapped[str | None] = mapped_column(String(20))
     owner_or_department: Mapped[str | None] = mapped_column(String(120))
     authorised_status: Mapped[bool | None]
+    manufacturer: Mapped[str | None] = mapped_column(String(80))
+    model: Mapped[str | None] = mapped_column(String(80))
+    color: Mapped[str | None] = mapped_column(String(40))
+    fuel_type: Mapped[str | None] = mapped_column(String(40))
+    registration_valid_until: Mapped[date | None]
+    insurance_valid_until: Mapped[date | None]
+    fitness_valid_until: Mapped[date | None]
+    puc_certificate_number: Mapped[str | None] = mapped_column(String(80))
+    puc_valid_until: Mapped[date | None]
+    profile_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    profile_sources: Mapped[dict | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Event(Base):
     __tablename__ = "vehicle_events"
     __table_args__ = (
-        CheckConstraint("direction IN ('IN', 'OUT')", name="event_direction"),
+        CheckConstraint("direction IN ('IN', 'OUT', 'SIGHTING')", name="event_direction"),
         CheckConstraint("verification_status IN ('AUTO', 'PENDING', 'VERIFIED')", name="event_verification"),
     )
     event_uuid: Mapped[UUID] = mapped_column(primary_key=True)
@@ -55,7 +67,7 @@ class Event(Base):
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     camera_id: Mapped[str] = mapped_column(ForeignKey("cameras.id"), index=True)
     gate_id: Mapped[str] = mapped_column(ForeignKey("gates.id"), index=True)
-    direction: Mapped[str] = mapped_column(String(3))
+    direction: Mapped[str] = mapped_column(String(8))
     track_id: Mapped[int | None]
     frame_number: Mapped[int | None]
     elapsed_seconds: Mapped[float | None]
@@ -83,6 +95,15 @@ class VehicleSession(Base):
     entry_camera_id: Mapped[str | None] = mapped_column(ForeignKey("cameras.id"))
     exit_camera_id: Mapped[str | None] = mapped_column(ForeignKey("cameras.id"))
     status: Mapped[str] = mapped_column(String(12), index=True)
+
+
+class ParkingConfirmation(Base):
+    __tablename__ = "parking_confirmations"
+    entry_event_id: Mapped[UUID] = mapped_column(ForeignKey("vehicle_events.event_uuid"), primary_key=True)
+    registration_number: Mapped[str] = mapped_column(ForeignKey("vehicles.registration_number"))
+    zone: Mapped[str] = mapped_column(String(80))
+    bay: Mapped[str | None] = mapped_column(String(40))
+    confirmed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class Detection(Base):

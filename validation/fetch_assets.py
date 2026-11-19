@@ -1,4 +1,4 @@
-"""Fetch and verify the two public files used by the integration tests."""
+"""Fetch and verify the public files used for integration and traffic replay."""
 
 import argparse
 import hashlib
@@ -18,6 +18,22 @@ ASSETS = (
         "models/yolov8n.pt",
         f"{RELEASES}/v8.3.0/yolov8n.pt",
         "f59b3d833e2ff32e194b5bb8e08d211dc7c5bdf144b90d2c8412c47ccfc83b36",
+    ),
+)
+INTEL = (
+    "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/"
+    "57978890822836f2b4743852f04f62fc511757e4"
+)
+TRAFFIC_ASSETS = (
+    (
+        "videos/intel-car-detection.mp4",
+        f"{INTEL}/car-detection.mp4",
+        "d31e0ebf194cc16e50eea784e7c3b0b1bb7976a4fb9b3fec26cb92a6704cca34",
+    ),
+    (
+        "videos/intel-person-bicycle-car-detection.mp4",
+        f"{INTEL}/person-bicycle-car-detection.mp4",
+        "452b11b7e0efbd019f1d9570d0c790e90416ad4ad29eec6003872d08443140ef",
     ),
 )
 
@@ -52,8 +68,10 @@ def fetch(path: Path, url: str, expected: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", type=Path, default=Path("data"))
+    parser.add_argument("--traffic", action="store_true", help="Also fetch the CC BY 4.0 Intel videos")
     args = parser.parse_args()
-    for name, url, expected in ASSETS:
+    assets = ASSETS + TRAFFIC_ASSETS if args.traffic else ASSETS
+    for name, url, expected in assets:
         path = args.data_dir / name
         try:
             fetch(path, url, expected)
